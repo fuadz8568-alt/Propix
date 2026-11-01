@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propix — Makler İdarə Paneli və Müştəri Portalı</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="glass-nav sticky top-0 z-40 text-white shadow-lg border-b border-slate-700/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+            <i class="fa-solid fa-robot text-white text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <span id="brandNameDisplay">Prop</span><span class="text-blue-400">ix</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-400/30">Noutbuk Paneli</span>
+            </h1>
+            <p class="text-[11px] text-slate-400">Makler Portalı & Müştəri Vitrini</p>
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex items-center space-x-2.5">
+          
+          <!-- Qiymətləri Yoxla Button -->
+          <button id="btnCheckPrices" onclick="checkPricesNow()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition" title="Rəqiblərin qiymət dəyişikliyini yoxla">
+            <i id="checkPricesIcon" class="fa-solid fa-arrows-rotate"></i>
+            <span class="hidden md:inline">Qiymətləri Yoxla</span>
+          </button>
+
+          <!-- Tənzimləmələr / Profil Button -->
+          <button onclick="openSettingsModal()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition" title="Profil və Əlaqə Nömrəsi Tənzimləmələri">
+            <i class="fa-solid fa-gear"></i>
+            <span class="hidden md:inline">Tənzimləmələr</span>
+          </button>
+
+          <!-- Notifications Bell -->
+          <div class="relative">
+            <button id="btnNotifications" onclick="toggleNotifications()" class="relative p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition">
+              <i class="fa-solid fa-bell text-lg"></i>
+              <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-slate-900 pulse-badge">
+                0
+              </span>
+            </button>
+
+            <!-- Notifications Dropdown -->
+            <div id="notificationsDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden transform origin-top-right transition-all">
+              <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-bell text-blue-400"></i>
+                  <span class="font-bold text-sm">Daxili Bildirişlər</span>
+                </div>
+                <div class="flex items-center space-x-2 text-xs">
+                  <button onclick="markAllNotificationsRead()" class="text-slate-300 hover:text-white transition">Oxundu et</button>
+                  <span class="text-slate-600">|</span>
+                  <button onclick="clearAllNotifications()" class="text-rose-400 hover:text-rose-300 transition">Təmizlə</button>
+                </div>
+              </div>
+              <div id="notificationsList" class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                <!-- Notifications populated here -->
+                <div class="p-6 text-center text-slate-400 text-xs">
+                  <i class="fa-regular fa-bell-slash text-2xl mb-2 text-slate-300"></i>
+                  <p>Hələ ki, yeni bildiriş yoxdur.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Yeni Ev Əlavə Et Button -->
+          <button onclick="openAddModal()" class="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-500/25 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Yeni Ev Əlavə Et</span>
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- HERO / STATS SUMMARY -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="glass-panel p-4 rounded-2xl shadow-sm flex items-center space-x-4 border border-slate-200/80">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-house-chimney"></i>
+        </div>
+        <div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Bazadakı Əmlaklar</div>
+          <div id="statTotalProperties" class="text-2xl font-bold text-slate-900">0</div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-4 rounded-2xl shadow-sm flex items-center space-x-4 border border-slate-200/80">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-users-viewfinder"></i>
+        </div>
+        <div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">İzlənilən Rəqiblər</div>
+          <div id="statTotalCompetitors" class="text-2xl font-bold text-slate-900">0</div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-4 rounded-2xl shadow-sm flex items-center space-x-4 border border-slate-200/80">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Son Qiymət Yoxlanışı</div>
+          <div id="statLastCheckTime" class="text-sm font-semibold text-slate-800">Hələ edilməyib</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER & SEARCH BAR -->
+    <div class="glass-panel p-4 rounded-2xl shadow-sm mb-6 border border-slate-200/80">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        
+        <!-- Search input -->
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+          <input type="text" id="searchInput" oninput="renderProperties()" placeholder="Ünvan, otaq, ev sahibi və ya qeyd..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+        </div>
+
+        <!-- Type filter -->
+        <div>
+          <select id="typeFilter" onchange="renderProperties()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+            <option value="">Bütün Əmlak Tipləri</option>
+            <option value="Yeni tikili">Yeni tikili</option>
+            <option value="Köhnə tikili">Köhnə tikili</option>
+            <option value="Həyət evi">Həyət evi / Villa</option>
+            <option value="Obyekt">Obyekt</option>
+            <option value="Torpaq">Torpaq</option>
+          </select>
+        </div>
+
+        <!-- Rooms filter -->
+        <div>
+          <select id="roomsFilter" onchange="renderProperties()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+            <option value="">Bütün Otaq Sayları</option>
+            <option value="1">1 otaqlı</option>
+            <option value="2">2 otaqlı</option>
+            <option value="3">3 otaqlı</option>
+            <option value="4">4+ otaqlı</option>
+          </select>
+        </div>
+
+        <!-- Sort option -->
+        <div>
+          <select id="sortFilter" onchange="renderProperties()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+            <option value="newest">Ən yeni əlavə olunanlar</option>
+            <option value="price_asc">Qiymət: Ucuzdan-Bahaya</option>
+            <option value="price_desc">Qiymət: Bahadan-Ucuza</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PROPERTIES LIST / GRID -->
+    <div id="propertiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Dynamic Property Cards inserted here -->
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div id="emptyState" class="hidden text-center py-16 px-4">
+      <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+        <i class="fa-solid fa-folder-open"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-800 mb-1">Hələ heç bir əmlak əlavə edilməyib</h3>
+      <p class="text-xs text-slate-500 max-w-md mx-auto mb-5">
+        Bina.az linkini yapışdıraraq bir kliklə məlumatları çəkin və şəxsi bazanıza əlavə edin.
+      </p>
+      <button onclick="openAddModal()" class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md transition">
+        <i class="fa-solid fa-plus"></i>
+        <span>İlk Əmlakı Əlavə Et</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ==================== MODAL: ADD / EDIT PROPERTY ==================== -->
+  <div id="propertyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 my-8 overflow-hidden transform transition-all">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg font-bold">
+            <i class="fa-solid fa-house-chimney-medical"></i>
+          </div>
+          <div>
+            <h2 id="modalTitle" class="text-base font-bold text-slate-900">Yeni Əmlak Əlavə Et</h2>
+            <p class="text-xs text-slate-500">Məlumatları bina.az linki ilə çəkin və ya əllə daxil edin</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- AUTO-FILL PROMINENT BOX -->
+      <div class="mt-4 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80">
+        <label class="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+          <i class="fa-solid fa-bolt text-amber-500"></i>
+          bina.az Linki ilə Ağıllı Avto-Doldurma (Auto-Fill)
+        </label>
+        <p class="text-[11px] text-blue-700/80 mb-2">
+          Linki bura yapışdırıb "Məlumatları Gətir" vurun — şəkillər, qiymət, otaq, sahə və parametrlər saniyələr içində dolacaq!
+        </p>
+        <div class="flex gap-2">
+          <input type="url" id="scrapeUrlInput" placeholder="Məs: https://bina.az/items/6517902" class="flex-1 px-3.5 py-2 bg-white border border-blue-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" id="btnScrape" onclick="handleScrapeUrl()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition">
+            <i id="scrapeSpinner" class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Məlumatları Gətir</span>
+          </button>
+        </div>
+        <div id="scrapeError" class="hidden mt-2 text-[11px] text-rose-600 font-medium"></div>
+      </div>
+
+      <!-- FORM -->
+      <form id="propertyForm" onsubmit="handleSaveProperty(event)" class="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+        <input type="hidden" id="formPropId">
+
+        <!-- Section 1: Əsas Parametrlər -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-info text-blue-500"></i>
+            Əsas Əmlak Məlumatları
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Elanın Başlığı *</label>
+              <input type="text" id="propTitle" required placeholder="Məs: 3 otaqlı yeni tikili (Xətai m.)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Qiymət (AZN) *</label>
+              <input type="number" id="propPrice" required placeholder="150000" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Əmlak Növü</label>
+              <select id="propBuildingType" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="Yeni tikili">Yeni tikili</option>
+                <option value="Köhnə tikili">Köhnə tikili</option>
+                <option value="Həyət evi">Həyət evi / Villa</option>
+                <option value="Obyekt">Obyekt</option>
+                <option value="Torpaq">Torpaq</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Otaq Sayı</label>
+              <input type="number" id="propRooms" placeholder="3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Sahə (m²)</label>
+              <input type="text" id="propArea" placeholder="95" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Mərtəbə</label>
+              <div class="flex gap-1">
+                <input type="number" id="propFloor" placeholder="5" title="Mərtəbə" class="w-1/2 px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none">
+                <span class="self-center text-slate-400">/</span>
+                <input type="number" id="propFloors" placeholder="16" title="Binanın mərtəbə sayı" class="w-1/2 px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Ünvan / Metro / Qəsəbə</label>
+              <input type="text" id="propLocation" placeholder="Xətai r., Yusif Səfərov küç." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div class="flex items-center gap-4 pt-5">
+              <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                <input type="checkbox" id="propHasKupca" class="w-4 h-4 text-blue-600 rounded">
+                <span>Kupça (Çıxarış)</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                <input type="checkbox" id="propHasRepair" class="w-4 h-4 text-blue-600 rounded">
+                <span>Təmirli</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Əsas Şəkil və bina.az Linki -->
+        <div class="pt-3 border-t border-slate-100">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Əsas Şəkil URL</label>
+              <input type="url" id="propMainPhoto" placeholder="https://..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Əsas bina.az Elan Linki (Qiymət İzləmə üçün)</label>
+              <input type="url" id="propMainBinaUrl" placeholder="https://bina.az/items/..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none">
+            </div>
+          </div>
+          <!-- Image preview -->
+          <div id="imagePreviewContainer" class="hidden mt-2 flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
+            <img id="imagePreview" src="" alt="Önizləmə" class="w-16 h-12 object-cover rounded-lg border border-slate-300">
+            <div class="text-[11px] text-slate-500">
+              <span id="photosCountText">1 şəkil yükləndi</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: MƏXFİ MAKLER MƏLUMATLARI -->
+        <div class="pt-3 border-t border-slate-100 bg-amber-50/50 p-4 rounded-2xl border border-amber-200/60">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-lock text-amber-600"></i>
+            Məxfi Makler Qeydləri (Yalnız Siz Görürsünüz)
+          </h4>
+          <p class="text-[11px] text-amber-700 mb-3">Bu məlumatlar gizli saxlanılır və heç bir kənar şəxs tərəfindən görünmür.</p>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Ev Sahibinin Adı/Soyadı</label>
+              <input type="text" id="ownerName" placeholder="Məs: Əhməd dayı" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Telefon Nömrəsi</label>
+              <input type="text" id="ownerPhone" placeholder="050 123 45 67" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp Nömrəsi</label>
+              <input type="text" id="ownerWhatsapp" placeholder="050 123 45 67" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Mənzil / Blok / Qapı nömrəsi</label>
+              <input type="text" id="privateApartmentNumber" placeholder="Blok 2, Mənzil 45, Kod 1234" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Makler Komissiyası / Şərtlər</label>
+              <input type="text" id="brokerCommission" placeholder="1% və ya 1000 AZN" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Şəxsi Qeydlər</label>
+            <textarea id="privateNotes" rows="2" placeholder="Açar qonşudadır, saat 18:00-dan sonra baxış mümkündür və s." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+          </div>
+        </div>
+
+        <!-- Section 4: RƏQİB MAKLER LİNKLƏRİ (MONİTORİNQ) -->
+        <div class="pt-3 border-t border-slate-100">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <i class="fa-solid fa-binoculars text-indigo-500"></i>
+              İzləniləcək Rəqib Elanları (Qiymət Nəzarəti)
+            </h4>
+            <button type="button" onclick="addCompetitorField()" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+              <i class="fa-solid fa-plus-circle"></i>
+              <span>Rəqib Linki Əlavə Et</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-2">Bu evi paylaşan digər maklerlərin və ya ev sahibinin bina.az linklərini əlavə edin ki, qiymət dəyişəndə sizə xəbər verilsin.</p>
+          
+          <div id="competitorsContainer" class="space-y-2">
+            <!-- Dynamic competitor fields inserted here -->
+          </div>
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition">
+            Ləğv et
+          </button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Yadda Saxla</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PROPERTY DETAILS & MONITOR ==================== -->
+  <div id="detailsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 my-8 overflow-hidden transform transition-all">
+      <div id="detailsModalContent">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: BROKER / AGENCY SETTINGS ==================== -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 my-8 overflow-hidden transform transition-all">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg font-bold">
+            <i class="fa-solid fa-user-gear"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Makler və Əlaqə Tənzimləmələri</h2>
+            <p class="text-xs text-slate-500">Müştəri səhifəsində görünəcək məlumatlarınız</p>
+          </div>
+        </div>
+        <button onclick="closeSettingsModal()" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="settingsForm" onsubmit="handleSaveSettings(event)" class="mt-4 space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Şirkət / Sayt Adı</label>
+          <input type="text" id="settingAgencyName" required placeholder="EMLAK BOT" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Adınız / Soyadınız (Vasitəçi)</label>
+          <input type="text" id="settingBrokerName" placeholder="Məs: Kənan Makler" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Əlaqə Telefonu (Zəng üçün)</label>
+            <input type="text" id="settingBrokerPhone" required placeholder="+994 50 123 45 67" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp Nömrəsi</label>
+            <input type="text" id="settingBrokerWhatsapp" required placeholder="+994 50 123 45 67" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div class="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl text-[11px] text-blue-800 flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-blue-600 mt-0.5"></i>
+          <span>Müştəriyə göndərdiyiniz linklərdə yalnız bu məlumatlar görünəcək. Ev sahibinin nömrəsi heç vaxt müştəriyə göstərilmir!</span>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+            Ləğv et
+          </button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i>
+            <span>Yadda Saxla</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION POPUP -->
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 max-w-sm bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-3 transition-all transform translate-y-2">
+    <div id="toastIcon" class="text-blue-400 text-lg"></div>
+    <div id="toastMessage" class="text-xs font-medium"></div>
+  </div>
+
+  <!-- APP JAVASCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
