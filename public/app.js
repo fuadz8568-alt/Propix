@@ -158,14 +158,80 @@ function updateStats() {
 }
 
 // -------------------------------------------------------------
-// 2. AUTO-FILL (SCRAPE BINA.AZ)
+// 2. WORKSPACE CONTROLS & AUTO-FILL
 // -------------------------------------------------------------
-async function handleScrapeUrl() {
-  const urlInput = document.getElementById('scrapeUrlInput');
+function showChoiceView() {
+  document.getElementById('modalChoiceView').classList.remove('hidden');
+  document.getElementById('modalAutoInputView').classList.add('hidden');
+  document.getElementById('modalEditorView').classList.add('hidden');
+}
+
+function chooseAddMode(mode) {
+  if (mode === 'auto') {
+    document.getElementById('modalChoiceView').classList.add('hidden');
+    document.getElementById('modalAutoInputView').classList.remove('hidden');
+    document.getElementById('modalEditorView').classList.add('hidden');
+    switchAutoSubTab('link');
+    setTimeout(() => {
+      const input = document.getElementById('autoScrapeUrlInput');
+      if (input) input.focus();
+    }, 100);
+  } else {
+    // Manual mode -> straight to editor
+    document.getElementById('modalChoiceView').classList.add('hidden');
+    document.getElementById('modalAutoInputView').classList.add('hidden');
+    document.getElementById('modalEditorView').classList.remove('hidden');
+    setTimeout(() => {
+      const titleInput = document.getElementById('propTitle');
+      if (titleInput) titleInput.focus();
+    }, 100);
+  }
+}
+
+function switchAutoSubTab(tab) {
+  const linkBox = document.getElementById('subTabLinkBox');
+  const textBox = document.getElementById('subTabTextBox');
+  const linkBtn = document.getElementById('tabAutoLinkBtn');
+  const textBtn = document.getElementById('tabAutoTextBtn');
+
+  if (tab === 'link') {
+    linkBox.classList.remove('hidden');
+    textBox.classList.add('hidden');
+    linkBtn.className = 'text-blue-600 border-b-2 border-blue-600 pb-2 flex items-center gap-2 transition';
+    textBtn.className = 'text-slate-400 hover:text-slate-600 pb-2 flex items-center gap-2 transition';
+  } else {
+    linkBox.classList.add('hidden');
+    textBox.classList.remove('hidden');
+    textBtn.className = 'text-indigo-600 border-b-2 border-indigo-600 pb-2 flex items-center gap-2 transition';
+    linkBtn.className = 'text-slate-400 hover:text-slate-600 pb-2 flex items-center gap-2 transition';
+  }
+}
+
+function updatePhotoPreview() {
+  const photoUrl = document.getElementById('propMainPhoto').value.trim();
+  const preview = document.getElementById('imagePreview');
+  const container = document.getElementById('imagePreviewContainer');
+  const countText = document.getElementById('photosCountText');
+
+  if (photoUrl) {
+    preview.src = photoUrl;
+    container.classList.remove('hidden');
+    if (!currentPhotos.includes(photoUrl)) {
+      currentPhotos = [photoUrl, ...currentPhotos];
+    }
+    countText.textContent = `${currentPhotos.length} şəkil aktivdir`;
+  } else {
+    container.classList.add('hidden');
+    countText.textContent = '0 şəkil yüklənib';
+  }
+}
+
+async function handleAutoScrapeUrl() {
+  const urlInput = document.getElementById('autoScrapeUrlInput');
   const url = urlInput.value.trim();
-  const btn = document.getElementById('btnScrape');
-  const spinner = document.getElementById('scrapeSpinner');
-  const errorEl = document.getElementById('scrapeError');
+  const btn = document.getElementById('btnAutoScrape');
+  const spinner = document.getElementById('autoScrapeSpinner');
+  const errorEl = document.getElementById('autoScrapeError');
 
   errorEl.classList.add('hidden');
   errorEl.textContent = '';
@@ -192,8 +258,8 @@ async function handleScrapeUrl() {
     }
 
     const data = json.data;
-    
-    // Auto-fill form fields
+
+    // Fill main specs
     document.getElementById('propTitle').value = data.title || '';
     document.getElementById('propPrice').value = data.price || '';
     document.getElementById('propBuildingType').value = data.buildingType || 'Yeni tikili';
@@ -202,12 +268,19 @@ async function handleScrapeUrl() {
     document.getElementById('propFloor').value = data.floor || '';
     document.getElementById('propFloors').value = data.floors || '';
     document.getElementById('propLocation').value = data.location || '';
+    document.getElementById('propMetro').value = data.metro || '';
     document.getElementById('propHasKupca').checked = !!data.hasBillOfSale;
     document.getElementById('propHasRepair').checked = !!data.hasRepair;
-    document.getElementById('propMainPhoto').value = data.mainPhoto || '';
+    document.getElementById('propHasMortgage').checked = !!data.hasMortgage;
+
+    // Source info
+    document.getElementById('propSourceSite').value = data.sourceSite || 'bina.az';
+    document.getElementById('propSourceId').value = data.sourceId || data.id || '';
+    document.getElementById('propPostedAt').value = data.postedAt ? formatTimeAgo(data.postedAt) : 'İndicə';
     document.getElementById('propMainBinaUrl').value = data.url || url;
 
-    // Photos preview
+    // Photos
+    document.getElementById('propMainPhoto').value = data.mainPhoto || '';
     currentPhotos = data.photos || (data.mainPhoto ? [data.mainPhoto] : []);
     if (data.mainPhoto) {
       document.getElementById('imagePreview').src = data.mainPhoto;
@@ -215,30 +288,366 @@ async function handleScrapeUrl() {
       document.getElementById('imagePreviewContainer').classList.remove('hidden');
     }
 
-    showToast('Bütün məlumatlar və şəkillər bina.az-dan avtomatik gətirildi!', 'success');
+    // Owner info & descriptions
+    if (data.ownerPhone) {
+      document.getElementById('ownerPhone').value = data.ownerPhone;
+      document.getElementById('ownerWhatsapp').value = data.ownerPhone;
+    }
+    if (data.contactName) {
+      document.getElementById('ownerName').value = data.contactName;
+    }
+    const rawDesc = data.originalDescription || data.description || '';
+    document.getElementById('propOriginalDescription').value = rawDesc;
+
+    // Pre-generate professional AI ad text
+    generateAIEstateText();
+
+    // Transition to editor workspace view!
+    document.getElementById('modalAutoInputView').classList.add('hidden');
+    document.getElementById('modalEditorView').classList.remove('hidden');
+
+    showToast('Bütün məlumatlar bina.az-dan uğurla çıxarıldı və İş Masasına köçürüldü! ⚡', 'success');
   } catch (err) {
-    errorEl.textContent = err.message;
+    if (err.message && err.message.includes('403')) {
+      errorEl.innerHTML = `
+        <div class="flex items-start gap-2.5">
+          <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5 text-base flex-shrink-0"></i>
+          <div>
+            <div class="font-bold text-rose-800">bina.az bu linki xarici bulud serverindən blokladı (Status 403).</div>
+            <div class="text-[11px] text-slate-600 mt-1">
+              Narahat olmayın! Yuxarıdakı 
+              <button type="button" onclick="switchAutoSubTab('text')" class="font-bold text-indigo-600 underline hover:text-indigo-800">
+                "2. Ağıllı Mətnlə Doldur"
+              </button> tabına keçin və elanın mətnini yapışdırın — bütün məlumatlar 100% zəmanətlə çıxarılacaq!
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      errorEl.textContent = err.message;
+    }
     errorEl.classList.remove('hidden');
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    spinner.className = 'fa-solid fa-wand-magic-sparkles';
+    spinner.className = 'fa-solid fa-bolt';
   }
+}
+
+function handleAutoSmartTextFill() {
+  const textInput = document.getElementById('autoSmartTextInput');
+  const text = (textInput ? textInput.value : '').trim();
+
+  if (!text) {
+    showToast('Zəhmət olmasa elan mətnini və ya WhatsApp mesajını yapışdırın!', 'warning');
+    return;
+  }
+
+  let filledCount = 0;
+
+  // 1. Price extraction
+  const priceMatch = text.match(/(?:qiymət|qiymet|price)?[:\s]*(\d[\d\s\.]{2,})\s*(?:AZN|USD|manat|\$)/i)
+                  || text.match(/(\d[\d\s\.]{3,})\s*AZN/i)
+                  || text.match(/(?:qiymət|qiymet)[:\s]*(\d[\d\s\.]{3,})/i);
+  if (priceMatch) {
+    const rawNum = priceMatch[1].replace(/[\s\.]/g, '');
+    const num = parseInt(rawNum, 10);
+    if (!isNaN(num) && num >= 100) {
+      document.getElementById('propPrice').value = num;
+      filledCount++;
+    }
+  }
+
+  // 2. Rooms extraction
+  const roomMatch = text.match(/(\d+)\s*(?:otaq|otaqlı|otaqli)/i) || text.match(/(?:otaq|otaq sayı)[:\s]*(\d+)/i);
+  if (roomMatch) {
+    document.getElementById('propRooms').value = parseInt(roomMatch[1], 10);
+    filledCount++;
+  }
+
+  // 3. Area extraction
+  const areaMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:m²|m2|kv|kv\.m|kvadrat|sot)/i) || text.match(/(?:sahə|sahe)[:\s]*(\d+(?:[\.,]\d+)?)/i);
+  if (areaMatch) {
+    const isSot = /sot/i.test(areaMatch[0]);
+    document.getElementById('propArea').value = areaMatch[1].replace(',', '.') + (isSot ? ' sot' : '');
+    filledCount++;
+  }
+
+  // 4. Floor / Total Floors
+  const floorBothMatch = text.match(/(\d+)\s*[\/\\]\s*(\d+)\s*(?:mərtəbə|mertebe)?/i) 
+                      || text.match(/mərtəbə[:\s]*(\d+)\s*[\/\\]\s*(\d+)/i);
+  if (floorBothMatch) {
+    document.getElementById('propFloor').value = parseInt(floorBothMatch[1], 10);
+    document.getElementById('propFloors').value = parseInt(floorBothMatch[2], 10);
+    filledCount += 2;
+  } else {
+    const singleFloorMatch = text.match(/(\d+)[-\s]*(?:ci|cü|cu|cı)?\s*mərtəbə/i);
+    if (singleFloorMatch) {
+      document.getElementById('propFloor').value = parseInt(singleFloorMatch[1], 10);
+      filledCount++;
+    }
+  }
+
+  // 5. Building Type
+  if (/yeni tikili/i.test(text)) {
+    document.getElementById('propBuildingType').value = 'Yeni tikili';
+    filledCount++;
+  } else if (/köhnə tikili|kohne tikili/i.test(text)) {
+    document.getElementById('propBuildingType').value = 'Köhnə tikili';
+    filledCount++;
+  } else if (/həyət evi|heyet evi|villa|bağ evi|bag evi/i.test(text)) {
+    document.getElementById('propBuildingType').value = 'Həyət evi';
+    filledCount++;
+  } else if (/obyekt/i.test(text)) {
+    document.getElementById('propBuildingType').value = 'Obyekt';
+    filledCount++;
+  } else if (/torpaq/i.test(text)) {
+    document.getElementById('propBuildingType').value = 'Torpaq';
+    filledCount++;
+  }
+
+  // 6. Kupça & Təmir & İpoteka
+  if (/kupça|çıxarış|cixaris|kupca/i.test(text) && !/kupçasız|kupcasiz|çıxarışsız/i.test(text)) {
+    document.getElementById('propHasKupca').checked = true;
+    filledCount++;
+  }
+  if (/təmirli|temirli|əla təmir|super təmir/i.test(text) && !/təmirsiz|temirsiz/i.test(text)) {
+    document.getElementById('propHasRepair').checked = true;
+    filledCount++;
+  }
+  if (/ipoteka|ipotekaya yararlı/i.test(text)) {
+    document.getElementById('propHasMortgage').checked = true;
+    filledCount++;
+  }
+
+  // 7. Location & Metro
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let locationFound = '';
+  let metroFound = '';
+  for (const line of lines) {
+    if (!locationFound && /rayon|küç|kuc|prospekt|pr\.|metro|m\.|qəsəbə|qes|baku|bakı|xətai|nərimanov|yasamal|nəsimi|səbail|binəqədi|sabunçu|suraxanı|xəzər|qaradağ|pirallahı/i.test(line)) {
+      locationFound = line.replace(/^[📍•\-\*#\d\.\s]+/, '').trim();
+    }
+    const mMatch = line.match(/([A-ZƏÖÜŞÇİa-zəöüşçi]+)\s+(?:metr(?:o|osu)|m\.)/i) || line.match(/(?:metro|m\.)\s+([A-ZƏÖÜŞÇİa-zəöüşçi]+)/i);
+    if (mMatch && !metroFound) {
+      metroFound = mMatch[1] + ' m.';
+    }
+  }
+  if (locationFound) {
+    document.getElementById('propLocation').value = locationFound.slice(0, 120);
+    filledCount++;
+  }
+  if (metroFound) {
+    document.getElementById('propMetro').value = metroFound;
+    filledCount++;
+  }
+
+  // 8. Contact phone
+  const phoneMatch = text.match(/(?:\+994|0)(?:50|51|55|70|77|99|12)\s*[\d\s\-]{7,10}/);
+  if (phoneMatch) {
+    const rawPhone = phoneMatch[0].replace(/\s+/g, ' ').trim();
+    document.getElementById('ownerPhone').value = rawPhone;
+    document.getElementById('ownerWhatsapp').value = rawPhone;
+    filledCount++;
+  }
+
+  // 9. Photo link
+  const imgMatch = text.match(/https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp)[^\s"'<>]*/i);
+  if (imgMatch) {
+    document.getElementById('propMainPhoto').value = imgMatch[0];
+    currentPhotos = [imgMatch[0]];
+    document.getElementById('imagePreview').src = imgMatch[0];
+    document.getElementById('photosCountText').textContent = '1 şəkil tapıldı';
+    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+    filledCount++;
+  }
+
+  // 10. Auto-title
+  const roomsVal = document.getElementById('propRooms').value;
+  const bTypeVal = document.getElementById('propBuildingType').value;
+  const areaVal = document.getElementById('propArea').value;
+  const locVal = document.getElementById('propLocation').value;
+
+  let genTitle = '';
+  if (roomsVal) genTitle += `${roomsVal} otaqlı `;
+  genTitle += bTypeVal;
+  if (areaVal) genTitle += ` (${areaVal} m²)`;
+  if (locVal) genTitle += ` — ${locVal.split(',')[0]}`;
+  document.getElementById('propTitle').value = genTitle.trim() || 'Yeni Əmlak Elanı';
+
+  // Raw description
+  document.getElementById('propOriginalDescription').value = text;
+  document.getElementById('propSourceSite').value = 'bina.az';
+  document.getElementById('propPostedAt').value = 'İndicə';
+
+  // Pre-generate professional AI ad text
+  generateAIEstateText();
+
+  // Transition to editor workspace view!
+  document.getElementById('modalAutoInputView').classList.add('hidden');
+  document.getElementById('modalEditorView').classList.remove('hidden');
+
+  showToast(`Mətn uğurla analiz edildi! ${filledCount} parametr avtomatik çıxarıldı. ✨`, 'success');
+}
+
+// -------------------------------------------------------------
+// FEATURE 1: ✨ SÜNİ İNTELLEKT (AI) PEŞƏKAR ELAN GENERATORU
+// -------------------------------------------------------------
+function generateAIEstateText() {
+  const title = document.getElementById('propTitle').value.trim();
+  const price = document.getElementById('propPrice').value.trim();
+  const bType = document.getElementById('propBuildingType').value;
+  const rooms = document.getElementById('propRooms').value.trim();
+  const area = document.getElementById('propArea').value.trim();
+  const floor = document.getElementById('propFloor').value.trim();
+  const floors = document.getElementById('propFloors').value.trim();
+  const location = document.getElementById('propLocation').value.trim();
+  const metro = document.getElementById('propMetro').value.trim();
+  const hasKupca = document.getElementById('propHasKupca').checked;
+  const hasRepair = document.getElementById('propHasRepair').checked;
+  const hasMortgage = document.getElementById('propHasMortgage').checked;
+
+  // Call checklist items
+  const isFurnished = document.getElementById('chkFurnished').checked;
+  const isMortgageOk = document.getElementById('chkMortgageOk').checked || hasMortgage;
+  const hasUtilities = document.getElementById('chkUtilitiesOk').checked;
+  const bottomPrice = document.getElementById('chkBottomPrice').value.trim();
+
+  // Raw notes
+  const rawDesc = document.getElementById('propOriginalDescription').value.trim();
+
+  // Broker settings
+  const agency = currentSettings.agencyName || 'Propix';
+  const brokerName = currentSettings.brokerName || 'Vasitəçi';
+  const phone = currentSettings.brokerPhone || '+994 50 123 45 67';
+  const wa = currentSettings.brokerWhatsapp || '+994 50 123 45 67';
+
+  // Construct structured professional ad text
+  let ad = '';
+  
+  // Headline
+  const headLoc = metro ? `${metro.toUpperCase()} METROSUNUN YAXINLIĞINDA` : (location ? location.split(',')[0].toUpperCase() : 'BAKI ŞƏHƏRİNDƏ');
+  ad += `🏡 ${headLoc} — ${rooms ? rooms + ' OTAQLI ' : ''}${bType.toUpperCase()} TƏCİLİ SATILIR!\n\n`;
+
+  // Address & specs
+  ad += `📍 Ünvan: ${location || 'Bakı ş.'}${metro ? ' (' + metro + ' yaxınlığı)' : ''}\n`;
+  ad += `🏢 Əmlak növü: ${bType}\n`;
+  if (rooms) ad += `🚪 Otaq sayı: ${rooms} otaqlı\n`;
+  if (area) ad += `📐 Ümumi sahə: ${area} m²\n`;
+  if (floor || floors) ad += `🏢 Mərtəbə: ${floor || '?'}${floors ? ' / ' + floors : ''}\n`;
+  ad += `\n`;
+
+  // Key highlights
+  ad += `✨ Əmlakın Üstünlükləri və Vəziyyəti:\n`;
+  ad += `• Sənəd: ${hasKupca ? 'Çıxarış (Kupça) var, alqı-satqıya tam hazırdır.' : 'Sənədlər qaydasındadır.'}\n`;
+  if (isMortgageOk) {
+    ad += `• İpoteka: İpotekaya tam yararlıdır.\n`;
+  }
+  ad += `• Təmir: ${hasRepair ? 'Əla və keyfiyyətli materiallarla təmir olunub.' : 'Təmirlidir, yaşayışa tam hazırdır.'}\n`;
+  ad += `• Kommunal: ${hasUtilities ? 'Qaz, su, işıq daimidir və müasir lift fasiləsiz işləyir.' : 'Qaz, su, işıq və lift fasiləsiz təmin olunur.'}\n`;
+  if (isFurnished) {
+    ad += `• Əşyalar: Mənzil bütün səliqəli əşyaları və texnikası ilə birlikdə satılır.\n`;
+  }
+  ad += `\n`;
+
+  // Clean raw owner notes if present (strip raw phone numbers from description to keep it clean)
+  if (rawDesc) {
+    const cleanNotes = rawDesc
+      .replace(/(?:\+994|0)(?:50|51|55|70|77|99|12)\s*[\d\s\-]{7,10}/g, '')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 3)
+      .join('\n');
+
+    if (cleanNotes.length > 10) {
+      ad += `📝 Ətraflı Məlumat:\n${cleanNotes}\n\n`;
+    }
+  }
+
+  // Price line
+  if (price) {
+    ad += `💰 Qiymət: ${Number(price).toLocaleString()} AZN`;
+    if (bottomPrice) {
+      ad += ` (Real alıcıya endirim mümkündür)\n\n`;
+    } else {
+      ad += ` (Real alıcı ilə razılaşma mümkündür)\n\n`;
+    }
+  }
+
+  // Broker contact block
+  ad += `📞 Ətraflı məlumat və mənzilə baxış üçün əlaqə saxlayın:\n`;
+  ad += `🏢 ${agency}${brokerName ? ' — ' + brokerName : ''}\n`;
+  ad += `📱 Tel: ${phone}\n`;
+  ad += `💬 WhatsApp: ${wa}\n`;
+
+  document.getElementById('propDescription').value = ad;
+  showToast('✨ Peşəkar bina.az elan mətni süni intellektlə hazırlandı!', 'success');
+}
+
+// -------------------------------------------------------------
+// FEATURE 5: 📋 BİNA.AZ ÜÇÜN MƏTNİ KOPYALA
+// -------------------------------------------------------------
+function copyBinaAzText() {
+  let desc = document.getElementById('propDescription').value.trim();
+  if (!desc) {
+    generateAIEstateText();
+    desc = document.getElementById('propDescription').value.trim();
+  }
+
+  if (!desc) {
+    showToast('Kopyalanacaq elan mətni tapılmadı', 'warning');
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(desc).then(() => {
+      showToast('📋 bina.az üçün peşəkar elan mətni kopyalandı! Birbaşa bina.az-a yapışdıra bilərsiniz.', 'success');
+    }).catch(() => {
+      fallbackCopyText(desc);
+    });
+  } else {
+    fallbackCopyText(desc);
+  }
+}
+
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showToast('📋 bina.az üçün peşəkar elan mətni kopyalandı! Birbaşa bina.az-a yapışdıra bilərsiniz.', 'success');
 }
 
 // -------------------------------------------------------------
 // 3. PROPERTY CRUD (SAVE, EDIT, DELETE)
 // -------------------------------------------------------------
 function openAddModal() {
-  document.getElementById('modalTitle').textContent = 'Yeni Əmlak Əlavə Et';
+  document.getElementById('modalTitle').textContent = 'Propix İş Masası';
+  document.getElementById('modalModeBadge').textContent = 'Yeni Əmlak';
   document.getElementById('propertyForm').reset();
   document.getElementById('formPropId').value = '';
-  document.getElementById('scrapeUrlInput').value = '';
-  document.getElementById('scrapeError').classList.add('hidden');
+  document.getElementById('autoScrapeUrlInput').value = '';
+  document.getElementById('autoSmartTextInput').value = '';
+  document.getElementById('autoScrapeError').classList.add('hidden');
   document.getElementById('imagePreviewContainer').classList.add('hidden');
   document.getElementById('competitorsContainer').innerHTML = '';
   currentPhotos = [];
 
+  // Reset checklist
+  document.getElementById('chkFurnished').checked = false;
+  document.getElementById('chkMortgageOk').checked = false;
+  document.getElementById('chkUtilitiesOk').checked = false;
+  document.getElementById('chkBottomPrice').value = '';
+  document.getElementById('chkViewingTime').value = '';
+
+  // Prefill broker display
+  document.getElementById('prefilledBrokerNameDisplay').textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
+  document.getElementById('prefilledBrokerPhoneDisplay').textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
+
+  // Show Choice view first
+  showChoiceView();
   document.getElementById('propertyModal').classList.remove('hidden');
 }
 
@@ -246,11 +655,12 @@ function openEditModal(id) {
   const prop = properties.find(p => p.id === id);
   if (!prop) return;
 
-  document.getElementById('modalTitle').textContent = 'Əmlak Məlumatlarına Düzəliş Et';
+  document.getElementById('modalTitle').textContent = 'Propix İş Masası';
+  document.getElementById('modalModeBadge').textContent = 'Redaktə';
   document.getElementById('formPropId').value = prop.id;
-  document.getElementById('scrapeUrlInput').value = prop.mainBinaUrl || '';
-  document.getElementById('scrapeError').classList.add('hidden');
+  document.getElementById('autoScrapeError').classList.add('hidden');
 
+  // Fill form
   document.getElementById('propTitle').value = prop.title || '';
   document.getElementById('propPrice').value = prop.price || '';
   document.getElementById('propBuildingType').value = prop.buildingType || 'Yeni tikili';
@@ -259,27 +669,51 @@ function openEditModal(id) {
   document.getElementById('propFloor').value = prop.floor || '';
   document.getElementById('propFloors').value = prop.floors || '';
   document.getElementById('propLocation').value = prop.location || '';
+  document.getElementById('propMetro').value = prop.metro || '';
   document.getElementById('propHasKupca').checked = !!prop.hasBillOfSale;
   document.getElementById('propHasRepair').checked = !!prop.hasRepair;
-  document.getElementById('propMainPhoto').value = prop.mainPhoto || '';
+  document.getElementById('propHasMortgage').checked = !!prop.hasMortgage;
+
+  // Source info
+  document.getElementById('propSourceSite').value = prop.sourceSite || 'bina.az';
+  document.getElementById('propSourceId').value = prop.sourceId || '';
+  document.getElementById('propPostedAt').value = prop.postedAt ? (typeof prop.postedAt === 'string' && prop.postedAt.includes('T') ? formatTimeAgo(prop.postedAt) : prop.postedAt) : '';
   document.getElementById('propMainBinaUrl').value = prop.mainBinaUrl || '';
+
+  // Photos
+  document.getElementById('propMainPhoto').value = prop.mainPhoto || '';
+  currentPhotos = prop.photos || (prop.mainPhoto ? [prop.mainPhoto] : []);
+  if (prop.mainPhoto) {
+    document.getElementById('imagePreview').src = prop.mainPhoto;
+    document.getElementById('photosCountText').textContent = `${currentPhotos.length} şəkil aktivdir`;
+    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+  } else {
+    document.getElementById('imagePreviewContainer').classList.add('hidden');
+    document.getElementById('photosCountText').textContent = '0 şəkil';
+  }
+
+  // Checklist
+  const chk = prop.checklist || {};
+  document.getElementById('chkFurnished').checked = !!chk.isFurnished;
+  document.getElementById('chkMortgageOk').checked = !!chk.isMortgageOk;
+  document.getElementById('chkUtilitiesOk').checked = !!chk.hasUtilities;
+  document.getElementById('chkBottomPrice').value = chk.bottomPrice || '';
+  document.getElementById('chkViewingTime').value = chk.viewingTime || '';
+
+  // Descriptions
+  document.getElementById('propOriginalDescription').value = prop.originalDescription || '';
+  document.getElementById('propDescription').value = prop.description || '';
 
   // Private fields
   document.getElementById('ownerName').value = prop.ownerName || '';
   document.getElementById('ownerPhone').value = prop.ownerPhone || '';
   document.getElementById('ownerWhatsapp').value = prop.ownerWhatsapp || '';
   document.getElementById('privateApartmentNumber').value = prop.privateApartmentNumber || '';
-  document.getElementById('brokerCommission').value = prop.brokerCommission || '';
   document.getElementById('privateNotes').value = prop.privateNotes || '';
 
-  currentPhotos = prop.photos || (prop.mainPhoto ? [prop.mainPhoto] : []);
-  if (prop.mainPhoto) {
-    document.getElementById('imagePreview').src = prop.mainPhoto;
-    document.getElementById('photosCountText').textContent = `${currentPhotos.length} şəkil`;
-    document.getElementById('imagePreviewContainer').classList.remove('hidden');
-  } else {
-    document.getElementById('imagePreviewContainer').classList.add('hidden');
-  }
+  // Prefill broker display
+  document.getElementById('prefilledBrokerNameDisplay').textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
+  document.getElementById('prefilledBrokerPhoneDisplay').textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
 
   // Competitors
   const container = document.getElementById('competitorsContainer');
@@ -287,6 +721,11 @@ function openEditModal(id) {
   if (Array.isArray(prop.competitors)) {
     prop.competitors.forEach(c => addCompetitorField(c));
   }
+
+  // Show Editor view directly
+  document.getElementById('modalChoiceView').classList.add('hidden');
+  document.getElementById('modalAutoInputView').classList.add('hidden');
+  document.getElementById('modalEditorView').classList.remove('hidden');
 
   document.getElementById('propertyModal').classList.remove('hidden');
 }
@@ -343,17 +782,32 @@ async function handleSaveProperty(e) {
     floor: Number(document.getElementById('propFloor').value) || null,
     floors: Number(document.getElementById('propFloors').value) || null,
     location: document.getElementById('propLocation').value.trim(),
+    metro: document.getElementById('propMetro').value.trim(),
     hasBillOfSale: document.getElementById('propHasKupca').checked,
     hasRepair: document.getElementById('propHasRepair').checked,
+    hasMortgage: document.getElementById('propHasMortgage').checked,
+    sourceSite: document.getElementById('propSourceSite').value.trim() || 'bina.az',
+    sourceId: document.getElementById('propSourceId').value.trim(),
+    postedAt: document.getElementById('propPostedAt').value.trim(),
     mainPhoto: document.getElementById('propMainPhoto').value.trim(),
     mainBinaUrl: document.getElementById('propMainBinaUrl').value.trim(),
     photos: currentPhotos,
+    // Descriptions
+    originalDescription: document.getElementById('propOriginalDescription').value.trim(),
+    description: document.getElementById('propDescription').value.trim(),
+    // Checklist
+    checklist: {
+      isFurnished: document.getElementById('chkFurnished').checked,
+      isMortgageOk: document.getElementById('chkMortgageOk').checked,
+      hasUtilities: document.getElementById('chkUtilitiesOk').checked,
+      bottomPrice: document.getElementById('chkBottomPrice').value.trim(),
+      viewingTime: document.getElementById('chkViewingTime').value.trim()
+    },
     // Private broker data
     ownerName: document.getElementById('ownerName').value.trim(),
     ownerPhone: document.getElementById('ownerPhone').value.trim(),
     ownerWhatsapp: document.getElementById('ownerWhatsapp').value.trim(),
     privateApartmentNumber: document.getElementById('privateApartmentNumber').value.trim(),
-    brokerCommission: document.getElementById('brokerCommission').value.trim(),
     privateNotes: document.getElementById('privateNotes').value.trim(),
     competitors: competitors
   };
@@ -735,19 +1189,23 @@ function openDetailsModal(id) {
 
   const content = document.getElementById('detailsModalContent');
   const photos = prop.photos && prop.photos.length > 0 ? prop.photos : (prop.mainPhoto ? [prop.mainPhoto] : []);
+  const chk = prop.checklist || {};
 
   content.innerHTML = `
     <!-- Header -->
     <div class="flex items-start justify-between pb-4 border-b border-slate-100">
       <div>
-        <div class="flex items-center gap-2 mb-1">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
           <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">${escapeHtml(prop.buildingType || 'Mənzil')}</span>
+          ${prop.metro ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 flex items-center gap-1"><i class="fa-solid fa-train-subway"></i> ${escapeHtml(prop.metro)}</span>` : ''}
           ${prop.hasBillOfSale ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-certificate"></i> Kupça Var</span>' : ''}
           ${prop.hasRepair ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">Təmirli</span>' : ''}
+          ${prop.hasMortgage ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700">İpoteka</span>' : ''}
         </div>
         <h2 class="text-xl font-extrabold text-slate-900">${escapeHtml(prop.title)}</h2>
         <p class="text-xs text-slate-500 flex items-center gap-1 mt-1">
           <i class="fa-solid fa-location-dot text-slate-400"></i> ${escapeHtml(prop.location || 'Ünvan qeyd olunmayıb')}
+          ${prop.sourceId ? `<span class="text-slate-400 ml-2 font-mono">| Kod: #${escapeHtml(prop.sourceId)}</span>` : ''}
         </p>
       </div>
       <div class="flex items-center space-x-2">
@@ -768,10 +1226,10 @@ function openDetailsModal(id) {
       </div>
     </div>
 
-    <!-- Body Layout: Left side gallery & description, Right side info & competitors -->
+    <!-- Body Layout: Left side gallery & AI text, Right side info & competitors -->
     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto pr-2">
       
-      <!-- Left Column: Gallery & Description -->
+      <!-- Left Column: Gallery & AI Peşəkar Description -->
       <div class="space-y-4">
         <!-- Main Image -->
         <div class="rounded-2xl overflow-hidden bg-slate-900 h-64 border border-slate-200">
@@ -787,13 +1245,22 @@ function openDetailsModal(id) {
           </div>
         ` : ''}
 
-        <!-- Description Box -->
-        ${prop.description ? `
-          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-            <h4 class="text-xs font-bold uppercase text-slate-500 mb-1">Elan Təsviri</h4>
-            <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">${escapeHtml(prop.description)}</p>
+        <!-- AI Generated / Bina.az Description with 1-click Copy -->
+        <div class="p-4 bg-gradient-to-br from-indigo-50/70 to-blue-50/70 rounded-2xl border border-indigo-200">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold uppercase text-indigo-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+              bina.az üçün Peşəkar Mətn
+            </h4>
+            <button onclick="copyPropertyAdText('${prop.id}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-sm transition">
+              <i class="fa-solid fa-copy"></i>
+              <span>Kopyala</span>
+            </button>
           </div>
-        ` : ''}
+          <div class="p-3 bg-white/90 rounded-xl border border-indigo-100 text-xs font-mono text-slate-800 whitespace-pre-line leading-relaxed max-h-56 overflow-y-auto">
+            ${escapeHtml(prop.description || prop.originalDescription || 'Peşəkar mətn hələ tərtib edilməyib.')}
+          </div>
+        </div>
 
         ${prop.mainBinaUrl ? `
           <a href="${prop.mainBinaUrl}" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3.5 py-2 rounded-xl transition">
@@ -803,7 +1270,7 @@ function openDetailsModal(id) {
         ` : ''}
       </div>
 
-      <!-- Right Column: Specs, Private Notes, Competitor Price Table -->
+      <!-- Right Column: Specs, Checklist, Private Notes, Competitor Price Table -->
       <div class="space-y-4">
         
         <!-- Price Banner -->
@@ -817,10 +1284,48 @@ function openDetailsModal(id) {
           </div>
         </div>
 
-        <!-- Məxfi Makler Məlumatları -->
+        <!-- Ev Sahibinə Zəng Çeklisti Nəticəsi -->
         <div class="p-4 bg-amber-50/80 rounded-2xl border border-amber-200">
           <h4 class="text-xs font-bold uppercase text-amber-900 mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-lock text-amber-600"></i>
+            <i class="fa-solid fa-phone-volume text-amber-600"></i>
+            Ev Sahibinə Zəng Çeklisti
+          </h4>
+          <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+            <div class="p-2 bg-white/80 rounded-xl border border-amber-200/50 flex items-center gap-1.5">
+              <i class="fa-solid ${chk.isFurnished ? 'fa-check text-emerald-600' : 'fa-xmark text-slate-400'}"></i>
+              <span class="${chk.isFurnished ? 'font-bold text-slate-800' : 'text-slate-500'}">Əşyalı</span>
+            </div>
+            <div class="p-2 bg-white/80 rounded-xl border border-amber-200/50 flex items-center gap-1.5">
+              <i class="fa-solid ${chk.isMortgageOk ? 'fa-check text-emerald-600' : 'fa-xmark text-slate-400'}"></i>
+              <span class="${chk.isMortgageOk ? 'font-bold text-slate-800' : 'text-slate-500'}">İpotekaya uyğun</span>
+            </div>
+            <div class="p-2 bg-white/80 rounded-xl border border-amber-200/50 flex items-center gap-1.5">
+              <i class="fa-solid ${chk.hasUtilities ? 'fa-check text-emerald-600' : 'fa-xmark text-slate-400'}"></i>
+              <span class="${chk.hasUtilities ? 'font-bold text-slate-800' : 'text-slate-500'}">Qaz/Su/Lift daimi</span>
+            </div>
+            <div class="p-2 bg-white/80 rounded-xl border border-amber-200/50 flex items-center gap-1.5">
+              <i class="fa-solid ${prop.hasBillOfSale ? 'fa-check text-emerald-600' : 'fa-xmark text-slate-400'}"></i>
+              <span class="${prop.hasBillOfSale ? 'font-bold text-slate-800' : 'text-slate-500'}">Kupça var</span>
+            </div>
+          </div>
+          ${chk.bottomPrice ? `
+            <div class="text-xs pt-1 border-t border-amber-200/60 mt-1 flex justify-between">
+              <span class="text-slate-500">Son qiymət razılığı:</span>
+              <span class="font-bold text-emerald-700">${escapeHtml(chk.bottomPrice)}</span>
+            </div>
+          ` : ''}
+          ${chk.viewingTime ? `
+            <div class="text-xs pt-1 flex justify-between">
+              <span class="text-slate-500">Baxış vaxtı / Açar:</span>
+              <span class="font-bold text-slate-800">${escapeHtml(chk.viewingTime)}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Məxfi Makler Məlumatları -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <h4 class="text-xs font-bold uppercase text-slate-700 mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-lock text-rose-500"></i>
             Ev Sahibi və Məxfi Qeydlər
           </h4>
           <div class="space-y-1.5 text-xs">
@@ -836,14 +1341,10 @@ function openDetailsModal(id) {
               <span class="text-slate-500">Mənzil/Blok:</span>
               <span class="font-bold text-slate-800">${escapeHtml(prop.privateApartmentNumber || 'Qeyd olunmayıb')}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-slate-500">Komissiya razılaşması:</span>
-              <span class="font-bold text-emerald-700">${escapeHtml(prop.brokerCommission || 'Qeyd olunmayıb')}</span>
-            </div>
             ${prop.privateNotes ? `
-              <div class="pt-2 border-t border-amber-200/60 mt-2">
+              <div class="pt-2 border-t border-slate-200 mt-2">
                 <span class="text-slate-500 block mb-0.5">Xüsusi qeydlər:</span>
-                <p class="text-slate-700 bg-white/70 p-2 rounded-xl text-[11px] leading-relaxed">${escapeHtml(prop.privateNotes)}</p>
+                <p class="text-slate-700 bg-white p-2 rounded-xl text-[11px] leading-relaxed">${escapeHtml(prop.privateNotes)}</p>
               </div>
             ` : ''}
           </div>
@@ -878,14 +1379,12 @@ function openDetailsModal(id) {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  <!-- Sizin öz qiymətiniz -->
                   <tr class="bg-blue-50/60 font-bold">
                     <td class="py-2 text-blue-900">Sizin Qiymətiniz (Əsas)</td>
                     <td class="py-2 text-right text-blue-900">${Number(prop.price).toLocaleString()} AZN</td>
                     <td class="py-2 text-right text-slate-400">—</td>
                     <td class="py-2 text-center text-slate-400">Əsas</td>
                   </tr>
-                  <!-- Rəqiblər -->
                   ${prop.competitors.map(c => {
                     const compPrice = Number(c.lastPrice) || 0;
                     const diff = compPrice - Number(prop.price);
@@ -923,6 +1422,17 @@ function openDetailsModal(id) {
   `;
 
   document.getElementById('detailsModal').classList.remove('hidden');
+}
+
+function copyPropertyAdText(id) {
+  const prop = properties.find(p => p.id === id);
+  if (!prop) return;
+  const text = prop.description || prop.originalDescription || '';
+  if (!text) {
+    showToast('Kopyalanacaq elan mətni yoxdur', 'warning');
+    return;
+  }
+  fallbackCopyText(text);
 }
 
 function closeDetailsModal() {
