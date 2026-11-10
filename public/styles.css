@@ -65,3 +65,31 @@ body {
 .modal-overlay {
   transition: opacity 0.2s ease-in-out;
 }
+
+/* Bina.az exact "Yeni elan" button */
+.btn-bina-green {
+  background-color: #3db460;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.btn-bina-green:hover {
+  background-color: #359f54;
+}
+
+.btn-bina-green:active {
+  background-color: #2e8f4a;
+  transform: scale(0.98);
+}

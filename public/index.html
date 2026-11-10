@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <script>
     tailwind.config = {
       theme: {
@@ -97,10 +97,14 @@
             </div>
           </div>
 
-          <!-- Yeni Ev Əlavə Et Button -->
-          <button onclick="openAddModal()" class="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-blue-500/25 transition">
-            <i class="fa-solid fa-plus"></i>
-            <span>Yeni Ev Əlavə Et</span>
+          <!-- Yeni Elan Button (bina.az exact style) -->
+          <button onclick="openAddModal()" class="btn-bina-green">
+            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span>Yeni elan</span>
           </button>
 
         </div>
@@ -203,9 +207,13 @@
       <p class="text-xs text-slate-500 max-w-md mx-auto mb-5">
         Bina.az linkini yapışdıraraq bir kliklə məlumatları çəkin və şəxsi bazanıza əlavə edin.
       </p>
-      <button onclick="openAddModal()" class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md transition">
-        <i class="fa-solid fa-plus"></i>
-        <span>İlk Əmlakı Əlavə Et</span>
+      <button onclick="openAddModal()" class="btn-bina-green">
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span>Yeni elan</span>
       </button>
     </div>
 
