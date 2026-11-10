@@ -30,6 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.classList.add('hidden');
     }
   });
+
+  // Close modals on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeDetailsModal();
+      closeSettingsModal();
+    }
+  });
 });
 
 // Toast notification helper
@@ -161,16 +170,24 @@ function updateStats() {
 // 2. WORKSPACE CONTROLS & AUTO-FILL
 // -------------------------------------------------------------
 function showChoiceView() {
-  document.getElementById('modalChoiceView').classList.remove('hidden');
-  document.getElementById('modalAutoInputView').classList.add('hidden');
-  document.getElementById('modalEditorView').classList.add('hidden');
+  const choice = document.getElementById('modalChoiceView');
+  const auto = document.getElementById('modalAutoInputView');
+  const editor = document.getElementById('modalEditorView');
+
+  if (choice) { choice.classList.remove('hidden'); choice.style.display = 'flex'; }
+  if (auto) { auto.classList.add('hidden'); auto.style.display = 'none'; }
+  if (editor) { editor.classList.add('hidden'); editor.style.display = 'none'; }
 }
 
 function chooseAddMode(mode) {
+  const choice = document.getElementById('modalChoiceView');
+  const auto = document.getElementById('modalAutoInputView');
+  const editor = document.getElementById('modalEditorView');
+
   if (mode === 'auto') {
-    document.getElementById('modalChoiceView').classList.add('hidden');
-    document.getElementById('modalAutoInputView').classList.remove('hidden');
-    document.getElementById('modalEditorView').classList.add('hidden');
+    if (choice) { choice.classList.add('hidden'); choice.style.display = 'none'; }
+    if (auto) { auto.classList.remove('hidden'); auto.style.display = 'flex'; }
+    if (editor) { editor.classList.add('hidden'); editor.style.display = 'none'; }
     switchAutoSubTab('link');
     setTimeout(() => {
       const input = document.getElementById('autoScrapeUrlInput');
@@ -178,9 +195,9 @@ function chooseAddMode(mode) {
     }, 100);
   } else {
     // Manual mode -> straight to editor
-    document.getElementById('modalChoiceView').classList.add('hidden');
-    document.getElementById('modalAutoInputView').classList.add('hidden');
-    document.getElementById('modalEditorView').classList.remove('hidden');
+    if (choice) { choice.classList.add('hidden'); choice.style.display = 'none'; }
+    if (auto) { auto.classList.add('hidden'); auto.style.display = 'none'; }
+    if (editor) { editor.classList.remove('hidden'); editor.style.display = 'flex'; }
     setTimeout(() => {
       const titleInput = document.getElementById('propTitle');
       if (titleInput) titleInput.focus();
@@ -239,6 +256,14 @@ async function handleAutoScrapeUrl() {
   if (!url) {
     errorEl.textContent = 'Zəhmət olmasa bina.az linkini daxil edin!';
     errorEl.classList.remove('hidden');
+    return;
+  }
+
+  // Ağıllı yönləndirmə: Əgər istifadəçi link əvəzinə birbaşa elan mətnini yapışdırıbsa
+  if (!url.startsWith('http://') && !url.startsWith('https://') && url.length > 20) {
+    document.getElementById('autoSmartTextInput').value = url;
+    switchAutoSubTab('text');
+    handleAutoSmartTextFill();
     return;
   }
 
@@ -624,114 +649,188 @@ function fallbackCopyText(text) {
 // 3. PROPERTY CRUD (SAVE, EDIT, DELETE)
 // -------------------------------------------------------------
 function openAddModal() {
-  document.getElementById('modalTitle').textContent = 'Propix İş Masası';
-  document.getElementById('modalModeBadge').textContent = 'Yeni Əmlak';
-  document.getElementById('propertyForm').reset();
-  document.getElementById('formPropId').value = '';
-  document.getElementById('autoScrapeUrlInput').value = '';
-  document.getElementById('autoSmartTextInput').value = '';
-  document.getElementById('autoScrapeError').classList.add('hidden');
-  document.getElementById('imagePreviewContainer').classList.add('hidden');
-  document.getElementById('competitorsContainer').innerHTML = '';
-  currentPhotos = [];
+  try {
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Propix İş Masası';
+    const modalBadge = document.getElementById('modalModeBadge');
+    if (modalBadge) modalBadge.textContent = 'Yeni Əmlak';
+    const form = document.getElementById('propertyForm');
+    if (form) form.reset();
+    const propId = document.getElementById('formPropId');
+    if (propId) propId.value = '';
 
-  // Reset checklist
-  document.getElementById('chkFurnished').checked = false;
-  document.getElementById('chkMortgageOk').checked = false;
-  document.getElementById('chkUtilitiesOk').checked = false;
-  document.getElementById('chkBottomPrice').value = '';
-  document.getElementById('chkViewingTime').value = '';
+    const autoUrl = document.getElementById('autoScrapeUrlInput');
+    if (autoUrl) autoUrl.value = '';
+    const oldUrl = document.getElementById('scrapeUrlInput');
+    if (oldUrl) oldUrl.value = '';
 
-  // Prefill broker display
-  document.getElementById('prefilledBrokerNameDisplay').textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
-  document.getElementById('prefilledBrokerPhoneDisplay').textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
+    const autoText = document.getElementById('autoSmartTextInput');
+    if (autoText) autoText.value = '';
+    const oldText = document.getElementById('smartTextInput');
+    if (oldText) oldText.value = '';
 
-  // Show Choice view first
-  showChoiceView();
-  document.getElementById('propertyModal').classList.remove('hidden');
+    const autoErr = document.getElementById('autoScrapeError');
+    if (autoErr) autoErr.classList.add('hidden');
+    const oldErr = document.getElementById('scrapeError');
+    if (oldErr) oldErr.classList.add('hidden');
+
+    const preview = document.getElementById('imagePreviewContainer');
+    if (preview) preview.classList.add('hidden');
+    const comp = document.getElementById('competitorsContainer');
+    if (comp) comp.innerHTML = '';
+    currentPhotos = [];
+
+    // Reset checklist
+    const chkF = document.getElementById('chkFurnished');
+    if (chkF) chkF.checked = false;
+    const chkM = document.getElementById('chkMortgageOk');
+    if (chkM) chkM.checked = false;
+    const chkU = document.getElementById('chkUtilitiesOk');
+    if (chkU) chkU.checked = false;
+    const chkB = document.getElementById('chkBottomPrice');
+    if (chkB) chkB.value = '';
+    const chkV = document.getElementById('chkViewingTime');
+    if (chkV) chkV.value = '';
+
+    // Prefill broker display
+    const bName = document.getElementById('prefilledBrokerNameDisplay');
+    if (bName) bName.textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
+    const bPhone = document.getElementById('prefilledBrokerPhoneDisplay');
+    if (bPhone) bPhone.textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
+
+    const changeModeBtn = document.getElementById('btnChangeMode');
+    if (changeModeBtn) changeModeBtn.classList.remove('hidden');
+
+    // Show Choice view first
+    showChoiceView();
+    const modal = document.getElementById('propertyModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  } catch (err) {
+    console.error('Error in openAddModal:', err);
+    const modal = document.getElementById('propertyModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  }
 }
 
 function openEditModal(id) {
-  const prop = properties.find(p => p.id === id);
-  if (!prop) return;
+  try {
+    const prop = properties.find(p => p.id === id);
+    if (!prop) return;
 
-  document.getElementById('modalTitle').textContent = 'Propix İş Masası';
-  document.getElementById('modalModeBadge').textContent = 'Redaktə';
-  document.getElementById('formPropId').value = prop.id;
-  document.getElementById('autoScrapeError').classList.add('hidden');
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Propix İş Masası';
+    const modalBadge = document.getElementById('modalModeBadge');
+    if (modalBadge) modalBadge.textContent = 'Redaktə';
+    const formPropId = document.getElementById('formPropId');
+    if (formPropId) formPropId.value = prop.id;
 
-  // Fill form
-  document.getElementById('propTitle').value = prop.title || '';
-  document.getElementById('propPrice').value = prop.price || '';
-  document.getElementById('propBuildingType').value = prop.buildingType || 'Yeni tikili';
-  document.getElementById('propRooms').value = prop.rooms || '';
-  document.getElementById('propArea').value = prop.area || '';
-  document.getElementById('propFloor').value = prop.floor || '';
-  document.getElementById('propFloors').value = prop.floors || '';
-  document.getElementById('propLocation').value = prop.location || '';
-  document.getElementById('propMetro').value = prop.metro || '';
-  document.getElementById('propHasKupca').checked = !!prop.hasBillOfSale;
-  document.getElementById('propHasRepair').checked = !!prop.hasRepair;
-  document.getElementById('propHasMortgage').checked = !!prop.hasMortgage;
+    const autoErr = document.getElementById('autoScrapeError');
+    if (autoErr) autoErr.classList.add('hidden');
 
-  // Source info
-  document.getElementById('propSourceSite').value = prop.sourceSite || 'bina.az';
-  document.getElementById('propSourceId').value = prop.sourceId || '';
-  document.getElementById('propPostedAt').value = prop.postedAt ? (typeof prop.postedAt === 'string' && prop.postedAt.includes('T') ? formatTimeAgo(prop.postedAt) : prop.postedAt) : '';
-  document.getElementById('propMainBinaUrl').value = prop.mainBinaUrl || '';
+    // Fill form safely
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    };
+    const setChk = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!val;
+    };
 
-  // Photos
-  document.getElementById('propMainPhoto').value = prop.mainPhoto || '';
-  currentPhotos = prop.photos || (prop.mainPhoto ? [prop.mainPhoto] : []);
-  if (prop.mainPhoto) {
-    document.getElementById('imagePreview').src = prop.mainPhoto;
-    document.getElementById('photosCountText').textContent = `${currentPhotos.length} şəkil aktivdir`;
-    document.getElementById('imagePreviewContainer').classList.remove('hidden');
-  } else {
-    document.getElementById('imagePreviewContainer').classList.add('hidden');
-    document.getElementById('photosCountText').textContent = '0 şəkil';
+    setVal('propTitle', prop.title);
+    setVal('propPrice', prop.price);
+    setVal('propBuildingType', prop.buildingType || 'Yeni tikili');
+    setVal('propRooms', prop.rooms);
+    setVal('propArea', prop.area);
+    setVal('propFloor', prop.floor);
+    setVal('propFloors', prop.floors);
+    setVal('propLocation', prop.location);
+    setVal('propMetro', prop.metro);
+    setChk('propHasKupca', prop.hasBillOfSale);
+    setChk('propHasRepair', prop.hasRepair);
+    setChk('propHasMortgage', prop.hasMortgage);
+
+    setVal('propSourceSite', prop.sourceSite || 'bina.az');
+    setVal('propSourceId', prop.sourceId);
+    setVal('propPostedAt', prop.postedAt ? (typeof prop.postedAt === 'string' && prop.postedAt.includes('T') ? formatTimeAgo(prop.postedAt) : prop.postedAt) : '');
+    setVal('propMainBinaUrl', prop.mainBinaUrl);
+
+    setVal('propMainPhoto', prop.mainPhoto);
+    currentPhotos = prop.photos || (prop.mainPhoto ? [prop.mainPhoto] : []);
+    const preview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const photosCount = document.getElementById('photosCountText');
+    if (prop.mainPhoto && preview && previewContainer) {
+      preview.src = prop.mainPhoto;
+      if (photosCount) photosCount.textContent = `${currentPhotos.length} şəkil aktivdir`;
+      previewContainer.classList.remove('hidden');
+    } else if (previewContainer) {
+      previewContainer.classList.add('hidden');
+      if (photosCount) photosCount.textContent = '0 şəkil';
+    }
+
+    const chk = prop.checklist || {};
+    setChk('chkFurnished', chk.isFurnished);
+    setChk('chkMortgageOk', chk.isMortgageOk);
+    setChk('chkUtilitiesOk', chk.hasUtilities);
+    setVal('chkBottomPrice', chk.bottomPrice);
+    setVal('chkViewingTime', chk.viewingTime);
+
+    setVal('propOriginalDescription', prop.originalDescription);
+    setVal('propDescription', prop.description);
+
+    setVal('ownerName', prop.ownerName);
+    setVal('ownerPhone', prop.ownerPhone);
+    setVal('ownerWhatsapp', prop.ownerWhatsapp);
+    setVal('privateApartmentNumber', prop.privateApartmentNumber);
+    setVal('privateNotes', prop.privateNotes);
+
+    const bName = document.getElementById('prefilledBrokerNameDisplay');
+    if (bName) bName.textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
+    const bPhone = document.getElementById('prefilledBrokerPhoneDisplay');
+    if (bPhone) bPhone.textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
+
+    const changeModeBtn = document.getElementById('btnChangeMode');
+    if (changeModeBtn) changeModeBtn.classList.add('hidden');
+
+    const compContainer = document.getElementById('competitorsContainer');
+    if (compContainer) {
+      compContainer.innerHTML = '';
+      if (Array.isArray(prop.competitors)) {
+        prop.competitors.forEach(c => addCompetitorField(c));
+      }
+    }
+
+    // Direct to Editor view
+    const choice = document.getElementById('modalChoiceView');
+    if (choice) { choice.classList.add('hidden'); choice.style.display = 'none'; }
+    const auto = document.getElementById('modalAutoInputView');
+    if (auto) { auto.classList.add('hidden'); auto.style.display = 'none'; }
+    const editor = document.getElementById('modalEditorView');
+    if (editor) { editor.classList.remove('hidden'); editor.style.display = 'flex'; }
+
+    const modal = document.getElementById('propertyModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+  } catch (err) {
+    console.error('Error opening edit modal:', err);
   }
-
-  // Checklist
-  const chk = prop.checklist || {};
-  document.getElementById('chkFurnished').checked = !!chk.isFurnished;
-  document.getElementById('chkMortgageOk').checked = !!chk.isMortgageOk;
-  document.getElementById('chkUtilitiesOk').checked = !!chk.hasUtilities;
-  document.getElementById('chkBottomPrice').value = chk.bottomPrice || '';
-  document.getElementById('chkViewingTime').value = chk.viewingTime || '';
-
-  // Descriptions
-  document.getElementById('propOriginalDescription').value = prop.originalDescription || '';
-  document.getElementById('propDescription').value = prop.description || '';
-
-  // Private fields
-  document.getElementById('ownerName').value = prop.ownerName || '';
-  document.getElementById('ownerPhone').value = prop.ownerPhone || '';
-  document.getElementById('ownerWhatsapp').value = prop.ownerWhatsapp || '';
-  document.getElementById('privateApartmentNumber').value = prop.privateApartmentNumber || '';
-  document.getElementById('privateNotes').value = prop.privateNotes || '';
-
-  // Prefill broker display
-  document.getElementById('prefilledBrokerNameDisplay').textContent = (currentSettings.brokerName || 'Vasitəçi (Siz)') + (currentSettings.agencyName ? ` (${currentSettings.agencyName})` : '');
-  document.getElementById('prefilledBrokerPhoneDisplay').textContent = currentSettings.brokerPhone || '+994 50 123 45 67';
-
-  // Competitors
-  const container = document.getElementById('competitorsContainer');
-  container.innerHTML = '';
-  if (Array.isArray(prop.competitors)) {
-    prop.competitors.forEach(c => addCompetitorField(c));
-  }
-
-  // Show Editor view directly
-  document.getElementById('modalChoiceView').classList.add('hidden');
-  document.getElementById('modalAutoInputView').classList.add('hidden');
-  document.getElementById('modalEditorView').classList.remove('hidden');
-
-  document.getElementById('propertyModal').classList.remove('hidden');
 }
 
 function closeModal() {
-  document.getElementById('propertyModal').classList.add('hidden');
+  const modal = document.getElementById('propertyModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
 }
 
 function addCompetitorField(data = {}) {

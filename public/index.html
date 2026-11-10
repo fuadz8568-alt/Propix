@@ -702,7 +702,7 @@ Qiymət: 165000 AZN. Kupça var, əla təmirli.
           <!-- Modal Bottom Workspace Footer Actions -->
           <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
             <div>
-              <button type="button" onclick="showChoiceView()" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2">
+              <button type="button" id="btnChangeMode" onclick="showChoiceView()" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span>Rejimi Dəyiş</span>
               </button>
@@ -800,7 +800,14 @@ Qiymət: 165000 AZN. Kupça var, əla təmirli.
     <div id="toastMessage" class="text-xs font-medium"></div>
   </div>
 
-  <!-- APP JAVASCRIPT -->
-  <script src="app.js"></script>
+  <!-- Backward-compatibility fallback inputs -->
+  <div style="display:none !important">
+    <input type="text" id="scrapeUrlInput">
+    <div id="scrapeError"></div>
+    <textarea id="smartTextInput"></textarea>
+  </div>
+
+  <!-- APP JAVASCRIPT (with cache-busting version parameter) -->
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>
